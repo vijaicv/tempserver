@@ -18,27 +18,36 @@
 
   var socket = io();
   $(function () {
-
+    socket.emit('joinchat',"vijaicv" );
     $('form').submit(function(){
-
       var json={
         username:"guest",
         message:$('#m').val(),
         type:"normal"
       }
+
       socket.emit('chat message',json );
       console.log(json);
       $('#messages').append($('<li>').text($('#m').val()));
       $('#m').val('');
       return false;
     });
+    $('#m').keypress(function(){
+      socket.emit('typing',"guest");
+    })
   });
+
+
 
   socket.on('chat message', function(msg){
     console.log(msg);
     var data=JSON.parse(JSON.stringify(msg));
      $('#messages').append($('<li>').text(data.username+" : "+data.message));
      console.log(msg);
+   });
+
+   socket.on('disconnected', function() {
+      socket.emit('disconnecting', "guest");
    });
 </script>
   </head>
