@@ -17,13 +17,15 @@ MongoClient.connect(dburl, function (err, client) {
                 console.log("could'nt connect to database => " + err)
         };
         db = client.db("youcuredme");
-        console.log("conected");
+        console.log("connected");
 })
 
 
 app.get("/",function(req,res){
   res.sendFile(__dirname + '/html/index.html');
 })
+
+
 
 var server=app.listen(process.env.PORT||8081,function(){
   var host = server.address().address
@@ -36,8 +38,10 @@ io.on('connection',function(socket){
   console.log("user connected");
 
   socket.on('joinchat', function(username){
-    console.log(username+"has joined the conversation");
-    socket.username=username;
+  socket.username=username;
+  socket.timestamp=new Date();
+    console.log(socket.username+"has joined the conversation");
+
   });
 
   socket.on('typing',function(user){
@@ -45,20 +49,35 @@ io.on('connection',function(socket){
   })
 
   socket.on('chat message', function(msg){
-      console.log(msg.username);
       var date =new Date();
       socket.broadcast.emit('chat message', msg);
+      socket.timestamp=date;
+      console.log(socket.timestamp);
       msg.time=date;
-      db.collection("chat").update({community:"diacare"},{$push:{chatbox:msg}},function(err,res){
+      db.collection("chat").insertOne(msg,function(err,res){
         if(err)throw(err);
       });
   });
 
-
-
-
   socket.on('disconnect', function(){
-      console.log(socket.username+'disconnected');
+      console.log(socket.username+' disconnected at '+socket.timestamp);
+      db.collection("users").update({name:socket.username},{$set:{lasttimestamp:socket.timestamp}},function(err,resp){
+        if(err)throw err;
+      });
   });
+
+  socket.on('iamback',function(){
+    console.log("requesting lattimestamp of "+socket.username);
+    db.collection("users").findOne({name:socket.username},function(err,resp){
+    if(err)throw err;
+      var lastonline=resp.lasttimestamp;
+      console.log(lastonline);
+      db.collection("chat").find({time:{$gt:new Date(lastonline)}}).project({_id:0}).toArray(function(err,resp){
+        if(err)throw err;
+        console.log(resp);
+        socket.emit('messagesyoumissed',resp);
+      })
+    })
+  })
 
 })

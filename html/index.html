@@ -19,6 +19,7 @@
   var socket = io();
   $(function () {
     socket.emit('joinchat',"vijaicv" );
+    socket.emit('iamback',"vijaicv" );
     $('form').submit(function(){
       var json={
         username:"guest",
