@@ -68,7 +68,7 @@ io.on('connection',function(socket){
 
   socket.on('iamback',function(){
     console.log("requesting lattimestamp of "+socket.username);
-    db.collection("users").findOne({name:socket.username},function(err,resp){
+    db.collection("users").findAndModify({name:socket.username},[],{name:socket.username,lasttimestamp:socket.timestamp},{upsert:true,new:true},function(err,resp){
     if(err)throw err;
       var lastonline=resp.lasttimestamp;
       console.log(lastonline);
