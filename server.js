@@ -25,6 +25,24 @@ app.get("/",function(req,res){
   res.sendFile(__dirname + '/html/index.html');
 })
 
+app.get("/getmessages",function(req,res){
+  var username=req.query.u;
+  console.log("requesting lattimestamp of "+username);
+      db.collection("users").find({name:username}).project({_id:0}).toArray(function(err,resp){
+      if(err)console.log(err);
+        var lastonline=resp[0].lasttimestamp;
+        console.log(resp[0].lasttimestamp);
+        db.collection("chat").find({time:{$gt:new Date(lastonline)}}).project({_id:0}).limit(50).toArray(function(err,resp){
+          if(err)throw err;
+          res.json({resp});
+          console.log(resp);
+        })
+      })
+
+      db.collection("users").update({name:username},{$set:{lasttimestamp:new Date()}},function(err,resp){
+              if(err)throw err;
+      });
+})
 
 
 var server=app.listen(process.env.PORT||8081,function(){
@@ -40,8 +58,7 @@ io.on('connection',function(socket){
   socket.on('joinchat', function(username){
   socket.username=username;
   socket.timestamp=new Date();
-    console.log(socket.username+"has joined the conversation");
-
+    console.log(socket.username+"has joined the conversation at "+socket.timestamp);
   });
 
   socket.on('typing',function(user){
@@ -66,18 +83,5 @@ io.on('connection',function(socket){
       });
   });
 
-  socket.on('iamback',function(){
-    console.log("requesting lattimestamp of "+socket.username);
-    db.collection("users").findAndModify({name:socket.username},[],{name:socket.username,lasttimestamp:socket.timestamp},{upsert:true,new:true},function(err,resp){
-    if(err)throw err;
-      var lastonline=resp.lasttimestamp;
-      console.log(lastonline);
-      db.collection("chat").find({time:{$gt:new Date(lastonline)}}).project({_id:0}).toArray(function(err,resp){
-        if(err)throw err;
-        console.log(resp);
-        socket.emit('messagesyoumissed',resp);
-      })
-    })
-  })
 
 })
